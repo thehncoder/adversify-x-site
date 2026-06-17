@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Adversify X — Real-time threat detection for your browser</title>
+<meta name="description" content="A Chrome extension that detects and blocks malvertising, trackers, and cryptojackers in real-time. Built by Harshit Nigam."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0b0d12;
+    --panel:#12141c;
+    --panel2:#171a24;
+    --line:#22252f;
+    --text:#e8ebf2;
+    --muted:#7c8499;
+    --muted2:#4d5266;
+    --signal:#5b7cff;
+    --signal-dim:rgba(91,124,255,0.12);
+    --alert:#ff4d6a;
+    --alert-dim:rgba(255,77,106,0.1);
+    --warn:#ffb648;
+    --safe:#3ddc97;
+    --safe-dim:rgba(61,220,151,0.1);
+    --disp:'Space Grotesk',sans-serif;
+    --body:'Inter',sans-serif;
+    --mono:'JetBrains Mono',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--void);
+    color:var(--text);
+    font-family:var(--body);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .bg-grid{
+    position:fixed; inset:0; z-index:0;
+    background-image:
+      radial-gradient(circle at 15% 8%, rgba(91,124,255,0.08), transparent 40%),
+      radial-gradient(circle at 85% 75%, rgba(255,77,106,0.05), transparent 40%);
+    pointer-events:none;
+  }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 28px; position:relative; z-index:1; }
+
+  /* ───────── NAV ───────── */
+  nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 28px; max-width:1080px; margin:0 auto;
+    position:relative; z-index:10;
+  }
+  .nav-brand{ display:flex; align-items:center; gap:9px; font-family:var(--mono); font-size:14px; letter-spacing:0.5px; }
+  .nav-dot{ width:7px; height:7px; border-radius:50%; background:var(--safe); box-shadow:0 0 8px var(--safe); animation:pulse-dot 2s infinite; }
+  @keyframes pulse-dot{ 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .nav-links{ display:flex; gap:28px; align-items:center; }
+  .nav-links a{ color:var(--muted); text-decoration:none; font-size:13.5px; transition:color 0.2s; }
+  .nav-links a:hover{ color:var(--text); }
+  .nav-cta{
+    background:var(--text); color:var(--void); padding:8px 16px; border-radius:6px;
+    font-size:13px; font-weight:600; text-decoration:none; transition:opacity 0.2s;
+  }
+  .nav-cta:hover{ opacity:0.85; }
+
+  /* ───────── HERO ───────── */
+  .hero{ padding:64px 0 50px; }
+  .hero-grid{ display:grid; grid-template-columns:1.05fr 0.95fr; gap:50px; align-items:center; }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:7px;
+    font-family:var(--mono); font-size:11.5px; color:var(--signal);
+    background:var(--signal-dim); border:1px solid rgba(91,124,255,0.25);
+    padding:5px 11px; border-radius:20px; margin-bottom:22px;
+  }
+  h1{
+    font-family:var(--disp); font-weight:600;
+    font-size:clamp(34px,4.2vw,50px); line-height:1.08; letter-spacing:-0.02px;
+    margin-bottom:20px;
+  }
+  h1 .accent{ color:var(--signal); }
+  .hero-sub{ font-size:16.5px; color:var(--muted); max-width:480px; margin-bottom:30px; line-height:1.6; }
+  .hero-actions{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .btn-primary{
+    background:var(--signal); color:#fff; padding:13px 22px; border-radius:8px;
+    font-weight:600; font-size:14.5px; text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+    transition:transform 0.15s, box-shadow 0.2s; box-shadow:0 0 0 rgba(91,124,255,0.4);
+  }
+  .btn-primary:hover{ transform:translateY(-1px); box-shadow:0 6px 20px rgba(91,124,255,0.3); }
+  .btn-ghost{
+    border:1px solid var(--line); color:var(--text); padding:13px 22px; border-radius:8px;
+    font-weight:500; font-size:14.5px; text-decoration:none; transition:border-color 0.2s, background 0.2s;
+  }
+  .btn-ghost:hover{ border-color:var(--muted2); background:var(--panel); }
+
+  /* ───────── LIVE CONSOLE (signature element) ───────── */
+  .console{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    overflow:hidden; box-shadow:0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+  .console-bar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 14px; border-bottom:1px solid var(--line); background:var(--panel2);
+  }
+  .console-bar-left{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; color:var(--muted); }
+  .console-dots{ display:flex; gap:5px; }
+  .console-dots span{ width:7px; height:7px; border-radius:50%; background:var(--line); }
+  .console-live{ display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:10.5px; color:var(--alert); }
+  .console-live .ld{ width:6px; height:6px; border-radius:50%; background:var(--alert); animation:pulse-dot 1.3s infinite; }
+  .console-body{ padding:16px; height:260px; overflow:hidden; font-family:var(--mono); font-size:12px; position:relative; }
+  .log-line{
+    display:flex; gap:8px; padding:6px 0; opacity:0; transform:translateY(6px);
+    animation:logIn 0.4s forwards; border-bottom:1px solid rgba(255,255,255,0.03);
+  }
+  @keyframes logIn{ to{ opacity:1; transform:none; } }
+  .log-time{ color:var(--muted2); flex-shrink:0; }
+  .log-tag{ flex-shrink:0; padding:1px 6px; border-radius:3px; font-size:10px; font-weight:600; height:fit-content; }
+  .log-tag.crit{ background:var(--alert-dim); color:var(--alert); }
+  .log-tag.high{ background:rgba(255,182,72,0.1); color:var(--warn); }
+  .log-tag.ok{ background:var(--safe-dim); color:var(--safe); }
+  .log-msg{ color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .log-msg b{ color:var(--text); font-weight:500; }
+  .console-footer{
+    padding:11px 16px; border-top:1px solid var(--line); display:flex; gap:18px;
+    font-family:var(--mono); font-size:11px; color:var(--muted); background:var(--panel2);
+  }
+  .console-footer b{ color:var(--text); }
+
+  /* ───────── STRIP STATS ───────── */
+  .stats-strip{
+    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+    padding:34px 0; margin-top:60px;
+  }
+  .stats-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+  .stat{ text-align:left; }
+  .stat-num{ font-family:var(--mono); font-size:30px; font-weight:600; color:var(--text); }
+  .stat-num span{ color:var(--signal); }
+  .stat-label{ font-size:12px; color:var(--muted); margin-top:4px; text-transform:uppercase; letter-spacing:0.6px; }
+
+  /* ───────── SECTION LABEL (sequence-based, real pipeline) ───────── */
+  .seg{ padding:80px 0; }
+  .seg-tag{
+    font-family:var(--mono); font-size:12px; color:var(--signal);
+    margin-bottom:14px; display:flex; align-items:center; gap:10px;
+  }
+  .seg-tag::before{ content:''; width:18px; height:1px; background:var(--signal); }
+  .seg-title{ font-family:var(--disp); font-size:clamp(26px,3vw,34px); font-weight:600; margin-bottom:14px; max-width:560px; }
+  .seg-desc{ color:var(--muted); font-size:15px; max-width:540px; margin-bottom:40px; line-height:1.65; }
+
+  /* pipeline */
+  .pipeline{ display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .pipe-step{ background:var(--panel); padding:26px; position:relative; }
+  .pipe-num{ font-family:var(--mono); font-size:11px; color:var(--muted2); margin-bottom:14px; }
+  .pipe-title{ font-family:var(--disp); font-size:18px; font-weight:600; margin-bottom:8px; }
+  .pipe-desc{ font-size:13.5px; color:var(--muted); line-height:1.6; }
+  .pipe-code{
+    margin-top:14px; font-family:var(--mono); font-size:11.5px; color:var(--signal);
+    background:var(--signal-dim); padding:8px 10px; border-radius:6px; border:1px solid rgba(91,124,255,0.2);
+  }
+
+  /* ───────── THREAT CATEGORIES ───────── */
+  .cat-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .cat-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:20px; transition:border-color 0.2s; }
+  .cat-card:hover{ border-color:var(--muted2); }
+  .cat-sev{ display:inline-block; font-family:var(--mono); font-size:10px; padding:2px 7px; border-radius:4px; margin-bottom:12px; font-weight:600; }
+  .cat-sev.crit{ background:var(--alert-dim); color:var(--alert); }
+  .cat-sev.high{ background:rgba(255,182,72,0.1); color:var(--warn); }
+  .cat-sev.med{ background:var(--signal-dim); color:var(--signal); }
+  .cat-name{ font-family:var(--disp); font-size:16px; font-weight:600; margin-bottom:6px; }
+  .cat-ex{ font-size:12.5px; color:var(--muted); font-family:var(--mono); }
+
+  /* ───────── PROOF / SCREENSHOTS ───────── */
+  .proof-grid{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .proof-card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .proof-shot{ width:100%; display:block; border-bottom:1px solid var(--line); }
+  .proof-cap{ padding:16px 18px; }
+  .proof-site{ font-family:var(--mono); font-size:13px; margin-bottom:4px; }
+  .proof-result{ font-size:12.5px; color:var(--muted); }
+  .proof-result.bad{ color:var(--alert); }
+  .proof-result.good{ color:var(--safe); }
+
+  /* ───────── ARCHITECTURE ───────── */
+  .stack-list{ display:flex; flex-direction:column; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .stack-row{ display:grid; grid-template-columns:160px 1fr; padding:16px 20px; border-bottom:1px solid var(--line); background:var(--panel); }
+  .stack-row:last-child{ border-bottom:none; }
+  .stack-key{ font-family:var(--mono); font-size:12.5px; color:var(--signal); }
+  .stack-val{ font-size:13.5px; color:var(--muted); }
+  .stack-val b{ color:var(--text); font-weight:500; }
+
+  /* ───────── CTA ───────── */
+  .cta-final{
+    text-align:center; padding:90px 0 100px;
+  }
+  .cta-final h2{ font-family:var(--disp); font-size:clamp(28px,3.6vw,40px); font-weight:600; margin-bottom:16px; }
+  .cta-final p{ color:var(--muted); font-size:15px; margin-bottom:30px; }
+  .cta-buttons{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+
+  footer{ border-top:1px solid var(--line); padding:30px 0; }
+  .footer-row{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+  .footer-left{ font-family:var(--mono); font-size:12px; color:var(--muted2); }
+  .footer-links{ display:flex; gap:20px; }
+  .footer-links a{ color:var(--muted); font-size:13px; text-decoration:none; }
+  .footer-links a:hover{ color:var(--text); }
+
+  @media (max-width: 820px){
+    .hero-grid{ grid-template-columns:1fr; }
+    .stats-row{ grid-template-columns:repeat(2,1fr); gap:24px; }
+    .pipeline{ grid-template-columns:1fr; }
+    .cat-grid{ grid-template-columns:1fr 1fr; }
+    .proof-grid{ grid-template-columns:1fr; }
+    .stack-row{ grid-template-columns:120px 1fr; }
+    .nav-links{ display:none; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<nav>
+  <div class="nav-brand"><span class="nav-dot"></span> ADVERSIFY&nbsp;X</div>
+  <div class="nav-links">
+    <a href="#pipeline">How it works</a>
+    <a href="#threats">Threat engine</a>
+    <a href="#proof">Live proof</a>
+    <a href="#stack">Stack</a>
+  </div>
+  <a class="nav-cta" href="https://github.com/thehncoder/adversify-x" target="_blank" rel="noopener">View source</a>
+</nav>
+
+<header class="hero wrap">
+  <div class="hero-grid">
+    <div>
+      <div class="eyebrow">● LIVE ON 2 BROWSERS · v2.0</div>
+      <h1>Your browser leaks more<br/>than you think. <span class="accent">Adversify X<br/>watches the door.</span></h1>
+      <p class="hero-sub">A Chrome extension that catches malvertising, trackers and cryptojackers before they execute — scanning every script on every page, in real time, entirely on your device.</p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="https://github.com/thehncoder/adversify-x" target="_blank" rel="noopener">↓ Install extension</a>
+        <a class="btn-ghost" href="#demo">Watch it scan ↓</a>
+      </div>
+    </div>
+
+    <div class="console" id="demo">
+      <div class="console-bar">
+        <div class="console-bar-left">
+          <div class="console-dots"><span></span><span></span><span></span></div>
+          scan.log
+        </div>
+        <div class="console-live"><span class="ld"></span> SCANNING</div>
+      </div>
+      <div class="console-body" id="logBody"></div>
+      <div class="console-footer">
+        <div>SITE <b id="ftSite">ndtv.com</b></div>
+        <div>THREATS <b id="ftThreats" style="color:var(--alert)">0</b></div>
+        <div>BLOCKED <b id="ftBlocked" style="color:var(--warn)">0</b></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="stats-strip wrap">
+  <div class="stats-row">
+    <div class="stat"><div class="stat-num"><span>6</span></div><div class="stat-label">Threat categories</div></div>
+    <div class="stat"><div class="stat-num"><span>35+</span></div><div class="stat-label">Detection patterns</div></div>
+    <div class="stat"><div class="stat-num"><span>13</span></div><div class="stat-label">Threats found · ndtv.com</div></div>
+    <div class="stat"><div class="stat-num"><span>0</span></div><div class="stat-label">Data leaves your device</div></div>
+  </div>
+</div>
+
+<section class="seg wrap" id="pipeline">
+  <div class="seg-tag">01 — DETECTION PIPELINE</div>
+  <h2 class="seg-title">Every script gets checked twice, before it ever runs.</h2>
+  <p class="seg-desc">The page is intercepted at two separate layers — one stops known threats from connecting at all, the other watches the live DOM for anything that slips through.</p>
+
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-num">STEP 01</div>
+      <div class="pipe-title">Network interception</div>
+      <div class="pipe-desc">Before a request to a known-bad domain even leaves the browser, Chrome's network layer kills it — no script downloaded, no connection made.</div>
+      <div class="pipe-code">declarativeNetRequest → block()</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">STEP 02</div>
+      <div class="pipe-title">Live DOM surveillance</div>
+      <div class="pipe-desc">A MutationObserver watches every node added to the page. New &lt;script&gt; or &lt;iframe&gt; tags are matched against the pattern engine the instant they appear.</div>
+      <div class="pipe-code">MutationObserver → matchThreats()</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">STEP 03</div>
+      <div class="pipe-title">Removal & reporting</div>
+      <div class="pipe-desc">Matches are stripped from the page before execution. The finding is sent to the background worker, which updates the badge count for that tab.</div>
+      <div class="pipe-code">node.remove() → reportToBackground()</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">STEP 04</div>
+      <div class="pipe-title">Risk scoring</div>
+      <div class="pipe-desc">The popup aggregates every finding into a weighted risk score — critical hits count for more than a stray tracker — and renders it as a single number.</div>
+      <div class="pipe-code">critical×18 + high×10 + medium×5</div>
+    </div>
+  </div>
+</section>
+
+<section class="seg wrap" id="threats">
+  <div class="seg-tag">02 — THREAT ENGINE</div>
+  <h2 class="seg-title">Six categories. Pulled from real-world blocklists, not guesswork.</h2>
+  <p class="seg-desc">Patterns are sourced from public threat intelligence — the same lineage as EasyList and uBlock Origin's filter sets — and grouped by what the script is actually trying to do to you.</p>
+
+  <div class="cat-grid">
+    <div class="cat-card"><div class="cat-sev crit">CRITICAL</div><div class="cat-name">Malvertising</div><div class="cat-ex">taboola · doubleclick · outbrain</div></div>
+    <div class="cat-card"><div class="cat-sev high">HIGH</div><div class="cat-name">Trackers</div><div class="cat-ex">analytics · hotjar · clarity</div></div>
+    <div class="cat-card"><div class="cat-sev crit">CRITICAL</div><div class="cat-name">Cryptojackers</div><div class="cat-ex">coinhive · cryptoloot</div></div>
+    <div class="cat-card"><div class="cat-sev med">MEDIUM</div><div class="cat-name">Fingerprinters</div><div class="cat-ex">fingerprintjs · evercookie</div></div>
+    <div class="cat-card"><div class="cat-sev crit">CRITICAL</div><div class="cat-name">Phishing patterns</div><div class="cat-ex">typo-domains · ip-logins</div></div>
+    <div class="cat-card"><div class="cat-sev high">HIGH</div><div class="cat-name">Obfuscated scripts</div><div class="cat-ex">eval(atob()) chains</div></div>
+  </div>
+</section>
+
+<section class="seg wrap" id="proof">
+  <div class="seg-tag">03 — LIVE PROOF</div>
+  <h2 class="seg-title">Tested against the real internet, not a sandbox.</h2>
+  <p class="seg-desc">A heavy ad-funded news site against a clean streaming platform — the difference in what loads behind the scenes is the whole point.</p>
+
+  <div class="proof-grid">
+    <div class="proof-card">
+      <img class="proof-shot" src="assets/proof-ndtv.png" alt="Adversify X detecting 13 threats on NDTV.com" />
+      <div class="proof-cap">
+        <div class="proof-site">ndtv.com</div>
+        <div class="proof-result bad">13 threats found · 9 blocked in real-time</div>
+      </div>
+    </div>
+    <div class="proof-card">
+      <img class="proof-shot" src="assets/proof-netflix.png" alt="Adversify X showing Netflix as clean" />
+      <div class="proof-cap">
+        <div class="proof-site">netflix.com</div>
+        <div class="proof-result good">All clear · zero false positives</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="seg wrap" id="stack">
+  <div class="seg-tag">04 — UNDER THE HOOD</div>
+  <h2 class="seg-title">No ML model. No server. Nothing to leak.</h2>
+  <p class="seg-desc">Everything below runs locally inside the browser tab. There's no API call carrying your browsing history anywhere — which is the entire point of a privacy tool.</p>
+
+  <div class="stack-list">
+    <div class="stack-row"><div class="stack-key">Engine</div><div class="stack-val"><b>Vanilla JavaScript (ES6+)</b> — regex pattern matching, zero dependencies</div></div>
+    <div class="stack-row"><div class="stack-key">Platform</div><div class="stack-val"><b>Chrome Extensions API</b>, Manifest V3</div></div>
+    <div class="stack-row"><div class="stack-key">Network layer</div><div class="stack-val"><b>declarativeNetRequest</b> — 20 domain-level block rules</div></div>
+    <div class="stack-row"><div class="stack-key">DOM layer</div><div class="stack-val"><b>MutationObserver</b> — real-time node interception</div></div>
+    <div class="stack-row"><div class="stack-key">Interface</div><div class="stack-val"><b>HTML/CSS</b> popup with animated risk gauge</div></div>
+    <div class="stack-row"><div class="stack-key">Storage</div><div class="stack-val"><b>chrome.storage.local</b> — theme preference only, nothing else persisted</div></div>
+  </div>
+</section>
+
+<section class="cta-final wrap">
+  <h2>See what's running behind<br/>the page you're on right now.</h2>
+  <p>Open source. No signup. No tracking of you, while it blocks tracking of you.</p>
+  <div class="cta-buttons">
+    <a class="btn-primary" href="https://github.com/thehncoder/adversify-x" target="_blank" rel="noopener">↓ Get the extension</a>
+    <a class="btn-ghost" href="https://github.com/thehncoder/adversify-x" target="_blank" rel="noopener">Read the source</a>
+  </div>
+</section>
+
+<footer class="wrap">
+  <div class="footer-row">
+    <div class="footer-left">ADVERSIFY X — BUILT BY HARSHIT NIGAM</div>
+    <div class="footer-links">
+      <a href="https://github.com/thehncoder" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://www.linkedin.com/in/harshit-nigam-cs/" target="_blank" rel="noopener">LinkedIn</a>
+      <a href="https://mrhn.in" target="_blank" rel="noopener">mrhn.in</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── Simulated live scan log ─────────────────────────────────────────────
+const events = [
+  { tag:'crit', text:'<b>window._taboola</b> push() — cdn.taboola.com/libtrc' },
+  { tag:'high', text:'<b>googletagmanager.com</b>/gtm.js?id=GTM-N7… loaded' },
+  { tag:'crit', text:'<b>securepubads.g.doubleclick.net</b> ad slot script' },
+  { tag:'high', text:'<b>clarity.ms</b>/tag/tb4zvl8rfv — session tracker' },
+  { tag:'ok',   text:'iframe src <b>youtube.com/embed</b> — allowed' },
+  { tag:'crit', text:'<b>outbrain.com</b> widget.js blocked at network layer' },
+  { tag:'high', text:'<b>connect.facebook.net</b>/en_US/fbevents.js' },
+  { tag:'ok',   text:'script src <b>cdn.jsdelivr.net</b> — no match, allowed' },
+  { tag:'crit', text:'inline eval(atob(...)) pattern matched — stripped' },
+  { tag:'high', text:'<b>hotjar.com</b>/c/hotjar-321.js — session recorder' },
+];
+
+const logBody = document.getElementById('logBody');
+const ftThreats = document.getElementById('ftThreats');
+const ftBlocked = document.getElementById('ftBlocked');
+let threatCount = 0, blockedCount = 0, idx = 0;
+
+function timeNow(){
+  const d = new Date();
+  return d.toTimeString().slice(0,8);
+}
+
+function pushLine(ev){
+  const row = document.createElement('div');
+  row.className = 'log-line';
+  const sevLabel = ev.tag === 'ok' ? 'ALLOW' : (ev.tag === 'crit' ? 'CRIT' : 'HIGH');
+  row.innerHTML = `<span class="log-time">${timeNow()}</span><span class="log-tag ${ev.tag}">${sevLabel}</span><span class="log-msg">${ev.text}</span>`;
+  logBody.appendChild(row);
+  while (logBody.children.length > 7) logBody.removeChild(logBody.firstChild);
+
+  if (ev.tag !== 'ok') {
+    threatCount++;
+    ftThreats.textContent = threatCount;
+    if (ev.tag === 'crit') { blockedCount++; ftBlocked.textContent = blockedCount; }
+  }
+}
+
+function tick(){
+  pushLine(events[idx % events.length]);
+  idx++;
+  if (idx % events.length === 0) {
+    setTimeout(() => {
+      threatCount = 0; blockedCount = 0;
+      ftThreats.textContent = 0; ftBlocked.textContent = 0;
+      logBody.innerHTML = '';
+    }, 1400);
+  }
+  setTimeout(tick, 1500 + Math.random()*700);
+}
+setTimeout(tick, 500);
+</script>
+</body>
+</html>
