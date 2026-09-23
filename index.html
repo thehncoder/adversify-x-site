@@ -237,7 +237,7 @@
       <h1>Your browser leaks more<br/>than you think. <span class="accent">Adversify X<br/>watches the door.</span></h1>
       <p class="hero-sub">A Chrome extension that detects and blocks malvertising, trackers and cryptojackers in real time — using network-level blocking and live DOM inspection entirely on your device.</p>
       <div class="hero-actions">
-        <a class="btn-primary" href="https://github.com/thehncoder/adversify-x" target="_blank" rel="noopener">↓ Install extension</a>
+        <a class="btn-primary" href="https://github.com/thehncoder/adversify-x" target="_blank" rel="noopener">↓ View source</a>
         <a class="btn-ghost" href="#demo">Watch it scan ↓</a>
       </div>
     </div>
@@ -248,9 +248,10 @@
           <div class="console-dots"><span></span><span></span><span></span></div>
           scan.log
         </div>
-        <div class="console-live"><span class="ld"></span> SCANNING</div>
+        <div class="console-live"><span class="ld"></span> DEMO SCAN</div>
       </div>
       <div class="console-body" id="logBody"></div>
+      <div style="padding:7px 16px; border-top:1px solid var(--line); background:var(--panel2); font-family:var(--mono); font-size:10px; color:var(--muted2);">DEMO SCAN · illustrative interface using recorded test events</div>
       <div class="console-footer">
         <div>SITE <b id="ftSite">ndtv.com</b></div>
         <div>THREATS <b id="ftThreats" style="color:var(--alert)">0</b></div>
@@ -264,15 +265,15 @@
   <div class="stats-row">
     <div class="stat"><div class="stat-num"><span>6</span></div><div class="stat-label">Threat categories</div></div>
     <div class="stat"><div class="stat-num"><span>35+</span></div><div class="stat-label">Detection patterns</div></div>
-    <div class="stat"><div class="stat-num"><span>13</span></div><div class="stat-label">Threats found · ndtv.com</div></div>
-    <div class="stat"><div class="stat-num"><span>0</span></div><div class="stat-label">Data leaves your device</div></div>
+    <div class="stat"><div class="stat-num"><span>13</span></div><div class="stat-label">Threats detected · ndtv.com</div></div>
+    <div class="stat"><div class="stat-num"><span>0</span></div><div class="stat-label">Adversify X telemetry sent</div></div>
   </div>
 </div>
 
 <section class="seg wrap" id="pipeline">
   <div class="seg-tag">01 — DETECTION PIPELINE</div>
-  <h2 class="seg-title">Every script gets checked twice, before it ever runs.</h2>
-  <p class="seg-desc">The page is intercepted at two separate layers — one stops known threats from connecting at all, the other watches the live DOM for anything that slips through.</p>
+  <h2 class="seg-title">Two-layer detection catches threats at the network and DOM levels.</h2>
+  <p class="seg-desc">Adversify X uses two complementary layers — network-level blocking for known threat domains and live DOM inspection for suspicious scripts and iframes.</p>
 
   <div class="pipeline">
     <div class="pipe-step">
@@ -290,7 +291,7 @@
     <div class="pipe-step">
       <div class="pipe-num">STEP 03</div>
       <div class="pipe-title">Removal & reporting</div>
-      <div class="pipe-desc">Matches are stripped from the page before execution. The finding is sent to the background worker, which updates the badge count for that tab.</div>
+      <div class="pipe-desc">Detected nodes are removed from the page, and the finding is sent to the background worker, which updates the badge count for that tab.</div>
       <div class="pipe-code">node.remove() → reportToBackground()</div>
     </div>
     <div class="pipe-step">
@@ -320,14 +321,14 @@
 <section class="seg wrap" id="proof">
   <div class="seg-tag">03 — LIVE PROOF</div>
   <h2 class="seg-title">Tested against the real internet, not a sandbox.</h2>
-  <p class="seg-desc">A heavy ad-funded news site against a clean streaming platform — the difference in what loads behind the scenes is the whole point.</p>
+  <p class="seg-desc">A heavy ad-funded news site against a clean streaming platform — the difference in what loads behind the scenes is the whole point. Results shown below are from recorded browser testing.</p>
 
   <div class="proof-grid">
     <div class="proof-card">
       <img class="proof-shot" src="assets/proof-ndtv.png" alt="Adversify X detecting 13 threats on NDTV.com" />
       <div class="proof-cap">
         <div class="proof-site">ndtv.com</div>
-        <div class="proof-result bad">13 threats found · 9 blocked in real-time</div>
+        <div class="proof-result bad">13 threats detected · 9 blocked in real-time</div>
       </div>
     </div>
     <div class="proof-card">
@@ -359,7 +360,7 @@
   <h2>See what's running behind<br/>the page you're on right now.</h2>
   <p>Open source. No signup. No tracking of you, while it blocks tracking of you.</p>
   <div class="cta-buttons">
-    <a class="btn-primary" href="https://github.com/thehncoder/adversify-x" target="_blank" rel="noopener">↓ Get the extension</a>
+    <a class="btn-primary" href="https://github.com/thehncoder/adversify-x" target="_blank" rel="noopener">↓ Get the source</a>
     <a class="btn-ghost" href="https://github.com/thehncoder/adversify-x" target="_blank" rel="noopener">Read the source</a>
   </div>
 </section>
